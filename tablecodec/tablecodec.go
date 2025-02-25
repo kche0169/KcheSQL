@@ -16,6 +16,7 @@ package tablecodec
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"time"
 
@@ -98,7 +99,21 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
-	return
+	if len(key) == RecordRowKeyLen {
+		return 0, 0, nil
+	}
+	k := key
+	if key.HasPrefix(k) {
+		return 0, 0, nil
+	}
+	k = key[prefixLen:]
+	fmt.Println(k)
+	key, tableID, err = codec.DecodeInt(k)
+	if err != nil {
+		//errInvalidRecordKey.GenWithStack(err)
+		return 0, 0, err
+	}
+	return 0, 0, nil
 }
 
 // appendTableIndexPrefix appends table index prefix  "t[tableID]_i".
@@ -148,6 +163,7 @@ func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
+
 	return tableID, indexID, indexValues, nil
 }
 
