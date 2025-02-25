@@ -98,13 +98,14 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
-	if len(key) != RecordRowKeyLen {
+	k := key
+	if len(k) < RecordRowKeyLen {
 		return 0, 0, errInvalidRecordKey.GenWithStack("invalid record key length: %d", len(key))
 	}
-	if !key.HasPrefix(tablePrefix) {
+	if !k.HasPrefix(tablePrefix) {
 		return 0, 0, errInvalidRecordKey.GenWithStack("invalid record key hasn't table prefix")
 	}
-	k := key[tablePrefixLength:]
+	k = k[tablePrefixLength:]
 	k, tableID, err = codec.DecodeInt(k)
 	if err != nil {
 		return 0, 0, err
@@ -164,7 +165,13 @@ func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
-
+	k := key
+	tableID, indexID, err = DecodeRecordKey(k)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	k = k[RecordRowKeyLen:]
+	indexValues = k
 	return tableID, indexID, indexValues, nil
 }
 
