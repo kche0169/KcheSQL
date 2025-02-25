@@ -110,6 +110,20 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
+	// Two different way
+	// first
+	//switch {
+	//case k.HasPrefix(recordPrefixSep):
+	//	break
+	//case k.HasPrefix(indexPrefixSep):
+	//	break
+	//default:
+	//	return 0, 0, errInvalidRecordKey.GenWithStack("invalid separator: %s", k[:2])
+	//}
+	// second
+	if !(k.HasPrefix(indexPrefixSep) || k.HasPrefix(recordPrefixSep)) {
+		return 0, 0, errInvalidRecordKey.GenWithStack("invalid separator: %s", k[:2])
+	}
 	k = k[recordPrefixSepLength:]
 	k, handle, err = codec.DecodeInt(k)
 	if err != nil {
