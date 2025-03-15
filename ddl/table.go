@@ -376,9 +376,6 @@ func updateVersionAndTableInfoWithCheck(t *meta.Meta, job *model.Job, tblInfo *m
 func updateVersionAndTableInfo(t *meta.Meta, job *model.Job, tblInfo *model.TableInfo, shouldUpdateVer bool) (
 	ver int64, err error) {
 	// TODO complete this function.
-	if t == nil || tblInfo == nil || job == nil {
-		return 0, errors.New("invalid input parameters")
-	}
 	if shouldUpdateVer {
 		ver, err = updateSchemaVersion(t, job)
 		if err != nil {

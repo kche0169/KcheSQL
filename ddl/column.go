@@ -284,7 +284,7 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 		}
 	case model.StateDeleteOnly:
 		// To be filled
-		colInfo.State = model.StateWriteReorganization
+		colInfo.State = model.StateDeleteReorganization
 		ver, err = updateVersionAndTableInfo(t, job, tblInfo, originalState != colInfo.State)
 		if err != nil {
 			return ver, errors.Trace(err)
