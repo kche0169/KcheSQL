@@ -197,6 +197,7 @@ func onAddColumn(d *ddlCtx, t *meta.Meta, job *model.Job) (ver int64, err error)
 	case model.StateNone:
 		// To be filled
 		columnInfo.State = model.StateDeleteOnly
+
 		ver, err = updateVersionAndTableInfoWithCheck(t, job, tblInfo, originalState != columnInfo.State)
 		if err != nil {
 			return ver, errors.Trace(err)
@@ -213,22 +214,24 @@ func onAddColumn(d *ddlCtx, t *meta.Meta, job *model.Job) (ver int64, err error)
 	case model.StateWriteOnly:
 		// To be filled
 		columnInfo.State = model.StateWriteReorganization
+
 		ver, err = updateVersionAndTableInfo(t, job, tblInfo, originalState != columnInfo.State)
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
 		job.SchemaState = model.StateWriteReorganization
+
 	case model.StateWriteReorganization:
 		// To be filled
 		adjustColumnInfoInAddColumn(tblInfo, offset)
 		columnInfo.State = model.StatePublic
+
 		ver, err = updateVersionAndTableInfo(t, job, tblInfo, originalState != columnInfo.State)
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
-		// Finish this job.
 		job.FinishTableJob(model.JobStateDone, model.StatePublic, ver, tblInfo)
-		return ver, nil
+
 	default:
 		err = ErrInvalidDDLState.GenWithStackByArgs("column", columnInfo.State)
 	}
@@ -266,6 +269,7 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 	originalState := colInfo.State
 
 	// TODO fill the codes of the each case.
+
 	switch colInfo.State {
 	case model.StatePublic:
 		// To be filled
@@ -275,6 +279,7 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
+		// job.SchemaState = model.StateWriteOnly
 	case model.StateWriteOnly:
 		// To be filled
 		colInfo.State = model.StateDeleteOnly
@@ -282,6 +287,7 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
+		// job.SchemaState = model.StateDeleteOnly
 	case model.StateDeleteOnly:
 		// To be filled
 		colInfo.State = model.StateDeleteReorganization
@@ -289,6 +295,8 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
+		// job.SchemaState = model.StateDeleteReorganization
+
 	case model.StateDeleteReorganization:
 		// To be filled
 		tblInfo.Columns = tblInfo.Columns[:len(tblInfo.Columns)-1]
@@ -297,6 +305,7 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
+
 		if job.IsRollingback() {
 			job.FinishTableJob(model.JobStateRollbackDone, model.StateNone, ver, tblInfo)
 		} else {
