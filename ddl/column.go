@@ -279,7 +279,7 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
-		// job.SchemaState = model.StateWriteOnly
+
 	case model.StateWriteOnly:
 		// To be filled
 		colInfo.State = model.StateDeleteOnly
@@ -287,7 +287,7 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
-		// job.SchemaState = model.StateDeleteOnly
+
 	case model.StateDeleteOnly:
 		// To be filled
 		colInfo.State = model.StateDeleteReorganization
@@ -295,7 +295,6 @@ func onDropColumn(t *meta.Meta, job *model.Job) (ver int64, _ error) {
 		if err != nil {
 			return ver, errors.Trace(err)
 		}
-		// job.SchemaState = model.StateDeleteReorganization
 
 	case model.StateDeleteReorganization:
 		// To be filled
