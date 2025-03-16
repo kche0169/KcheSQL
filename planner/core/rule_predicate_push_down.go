@@ -357,16 +357,63 @@ func (p *LogicalProjection) PredicatePushDown(predicates []expression.Expression
 // A simple example is that `select * from (select count(*) from t group by b) tmp_t where b > 1` is the same with
 // `select * from (select count(*) from t where b > 1 group by b) tmp_t.
 // parameters:
-//   predicates: an expression slice which needs to be pushed down as deeply as possible.
+//
+//	predicates: an expression slice which needs to be pushed down as deeply as possible.
+//
 // return values:
-//   ret:     the expressions that can't be pushed.
-//   retPlan: a plan that represents a new root, because it might change the root if the having clause exists
+//
+//	ret:     the expressions that can't be pushed.
+//	retPlan: a plan that represents a new root, because it might change the root if the having clause exists
+//
 // In this function, you need to iterate through list `predicates`, and consider whether each function in it can be pushed down
 // below the current aggregation.
 // Hints:
-//   1. predicates need to be discussed in two types: expression.Constant and expression.ScalarFunction
+//  1. predicates need to be discussed in two types: expression.Constant and expression.ScalarFunction
 func (la *LogicalAggregation) PredicatePushDown(predicates []expression.Expression) (ret []expression.Expression, retPlan LogicalPlan) {
-	return predicates, la
+	canBePushed := make([]expression.Expression, 0, len(predicates))
+	canNotBePushed := make([]expression.Expression, 0, len(predicates))
+	for _, expr := range la.GroupByItems {
+		if expression.HasAssignSetVarFunc(expr) {
+			_, child := la.baseLogicalPlan.PredicatePushDown(nil)
+			return predicates, child
+		}
+	}
+	groupByCols := expression.NewSchema(la.GetGroupByCols()...)
+	oldExprs := make([]expression.Expression, 0, len(la.AggFuncs))
+	for _, cond := range predicates {
+		switch cond := cond.(type) {
+		case *expression.Constant:
+			// 常量可以直接下推
+			canBePushed = append(canBePushed, cond)
+
+		case *expression.ScalarFunction:
+			// 提取表达式涉及的列
+			cols := expression.ExtractColumns(cond)
+			flag := true
+			for _, col := range cols {
+				if !groupByCols.Contains(col) {
+					flag = false
+					break
+				}
+			}
+
+			if flag {
+				// 如果所有列都在 GROUP BY 中，进行列替换，然后下推
+				newExpr := expression.ColumnSubstitute(cond, la.Schema(), oldExprs)
+				canBePushed = append(canBePushed, newExpr)
+			} else {
+				// 不能下推的表达式保留
+				canNotBePushed = append(canNotBePushed, cond)
+			}
+
+		default:
+			// 其他情况，默认不能下推
+			canNotBePushed = append(canNotBePushed, cond)
+		}
+	}
+	remained, child := la.baseLogicalPlan.PredicatePushDown(canBePushed)
+	//return predicates, la
+	return append(remained, canNotBePushed...), child
 }
 
 // PredicatePushDown implements LogicalPlan PredicatePushDown interface.
