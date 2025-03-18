@@ -16,6 +16,7 @@ package statistics
 import (
 	"math"
 	"reflect"
+	"sort"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tidb/sessionctx/stmtctx"
@@ -77,20 +78,42 @@ func (c *CMSketch) QueryBytes(d []byte) uint64 {
 
 func (c *CMSketch) queryHashValue(h1, h2 uint64) uint64 {
 	// TODO: implement the query method.
-	var minCount uint32 = math.MaxUint32
-	var finalEstimate uint64
+	var estimates []uint64
+	minCount := uint64(math.MaxUint64)
 	width := uint64(c.width)
 	for i, _ := range c.table {
 		j := (h1 + uint64(i)*h2) % width
-		if c.table[i][j] < minCount {
-			minCount = c.table[i][j]
-			noise := (c.count - uint64(c.table[i][j])) / (width - 1)
-			estimate := uint64(c.table[i][j]) - noise
-			finalEstimate += estimate
+		if minCount > uint64(c.table[i][j]) {
+			minCount = uint64(c.table[i][j])
 		}
+		noise := (c.count - uint64(c.table[i][j])) / (width - 1)
+		if c.table[i][j] == 0 {
+			estimates = append(estimates, 0)
+		} else if noise > uint64(c.table[i][j]) {
+			estimates = append(estimates, 1)
+		} else {
+			estimate := uint64(c.table[i][j]) - noise + 1
+			estimates = append(estimates, estimate)
+		}
+
 	}
-	finalEstimate /= width
-	return finalEstimate
+	sort.Slice(estimates, func(i, j int) bool {
+		return estimates[i] < estimates[j]
+	})
+	var res uint64
+	if c.depth%2 == 1 {
+		res = estimates[c.depth/2]
+	} else {
+		res = (estimates[c.depth/2-1] + estimates[c.depth/2]) / 2
+	}
+	if res > minCount+1 {
+		res = minCount + 1
+	}
+	if res == 0 {
+		return uint64(0)
+	}
+	res = res - 1
+	return res
 }
 
 // MergeCMSketch merges two CM Sketch.
