@@ -14,6 +14,7 @@
 package statistics
 
 import (
+	"github.com/cznic/sortutil"
 	"math"
 	"reflect"
 	"sort"
@@ -97,15 +98,12 @@ func (c *CMSketch) queryHashValue(h1, h2 uint64) uint64 {
 		}
 
 	}
-	sort.Slice(estimates, func(i, j int) bool {
-		return estimates[i] < estimates[j]
-	})
-	var res uint64
-	if c.depth%2 == 1 {
-		res = estimates[c.depth/2]
-	} else {
-		res = (estimates[c.depth/2-1] + estimates[c.depth/2]) / 2
-	}
+	//sort.Slice(estimates, func(i, j int) bool {
+	//	return estimates[i] < estimates[j]
+	//})
+	sort.Sort(sortutil.Uint64Slice(estimates))
+	// Median of all values
+	res := estimates[(c.depth-1)/2] + (estimates[c.depth/2]-estimates[(c.depth-1)/2])/2
 	if res > minCount+1 {
 		res = minCount + 1
 	}
